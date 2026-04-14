@@ -4,11 +4,13 @@ class ChatService {
 
   private io: any;
 
-  setIO(io: any) {
+  setIO(io: any)
+  {
     this.io = io;
   }
 
-  async createSystemMessage(client: any, chatId: string, content: string) {
+  async createSystemMessage(client: any, chatId: string, content: string)
+  {
     const seqRes = await client.query(
       `SELECT COALESCE(MAX(sequence_number), 0) + 1 AS seq
        FROM messages
@@ -16,7 +18,7 @@ class ChatService {
       [chatId]
     );
 
-    const sequenceNumber = seqRes.rows[0].seq;
+    const sequenceNumber = Number(seqRes.rows[0].seq);
 
     const res = await client.query(
       `INSERT INTO messages (chat_id, content, sequence_number, type, client_id)
@@ -28,10 +30,15 @@ class ChatService {
     return res.rows[0];
   }
 
-  async createChat(userId: string, data: { name?: string; type: "direct" | "group"; memberIds?: string[] }) {
+  async createChat(
+    userId: string,
+    data: { name?: string; type: "direct" | "group"; memberIds?: string[] }
+  )
+  {
     const client = await pool.connect();
 
-    try {
+    try
+    {
       await client.query("BEGIN");
 
       const chatRes = await client.query(
@@ -44,18 +51,20 @@ class ChatService {
       const chat = chatRes.rows[0];
 
       await client.query(
-        `INSERT INTO memberships (user_id, chat_id, role)
-         VALUES ($1, $2, 'admin')`,
+        `INSERT INTO memberships (user_id, chat_id, role, join_sequence_number, last_seen_sequence_number)
+         VALUES ($1, $2, 'admin', 0, 0)`,
         [userId, chat.id]
       );
 
-      if (data.memberIds?.length) {
-        for (const memberId of data.memberIds) {
+      if (data.memberIds?.length)
+      {
+        for (const memberId of data.memberIds)
+        {
           if (memberId === userId) continue;
 
           await client.query(
-            `INSERT INTO memberships (user_id, chat_id)
-             VALUES ($1, $2)
+            `INSERT INTO memberships (user_id, chat_id, role, join_sequence_number, last_seen_sequence_number)
+             VALUES ($1, $2, 'member', 0, 0)
              ON CONFLICT DO NOTHING`,
             [memberId, chat.id]
           );
@@ -65,19 +74,24 @@ class ChatService {
       await client.query("COMMIT");
 
       return chat;
-
-    } catch (err) {
+    }
+    catch (err)
+    {
       await client.query("ROLLBACK");
       throw err;
-    } finally {
+    }
+    finally
+    {
       client.release();
     }
   }
 
-  async addMember(requesterId: string, chatId: string, targetUserId: string) {
+  async addMember(requesterId: string, chatId: string, targetUserId: string)
+  {
     const client = await pool.connect();
 
-    try {
+    try
+    {
       await client.query("BEGIN");
 
       const chatRes = await client.query(
@@ -94,7 +108,8 @@ class ChatService {
 
       if (!memberRes.rowCount) throw new Error("NOT_A_MEMBER");
 
-      if (memberRes.rows[0].role !== "admin") {
+      if (memberRes.rows[0].role !== "admin")
+      {
         throw new Error("ONLY_ADMIN_CAN_ADD");
       }
 
@@ -103,20 +118,30 @@ class ChatService {
         [targetUserId, chatId]
       );
 
-      if (existing.rowCount) {
+      if (existing.rowCount)
+      {
         await client.query("COMMIT");
         return { success: true };
       }
 
       await client.query(
-        `INSERT INTO memberships (user_id, chat_id)
-         VALUES ($1, $2)`,
-        [targetUserId, chatId]
-      );
-
-      await client.query(
         `SELECT id FROM chats WHERE id = $1 FOR UPDATE`,
         [chatId]
+      );
+
+      const seqRes = await client.query(
+        `SELECT COALESCE(MAX(sequence_number), 0) AS seq
+         FROM messages
+         WHERE chat_id = $1`,
+        [chatId]
+      );
+
+      const currentSeq = Number(seqRes.rows[0].seq);
+
+      await client.query(
+        `INSERT INTO memberships (user_id, chat_id, role, join_sequence_number, last_seen_sequence_number)
+         VALUES ($1, $2, 'member', $3, $3)`,
+        [targetUserId, chatId, currentSeq]
       );
 
       const message = await this.createSystemMessage(
@@ -131,19 +156,24 @@ class ChatService {
       this.io.to(targetUserId).emit("added_to_chat", { chatId });
 
       return { success: true };
-
-    } catch (err) {
+    }
+    catch (err)
+    {
       await client.query("ROLLBACK");
       throw err;
-    } finally {
+    }
+    finally
+    {
       client.release();
     }
   }
 
-  async removeMember(requesterId: string, chatId: string, targetUserId: string) {
+  async removeMember(requesterId: string, chatId: string, targetUserId: string)
+  {
     const client = await pool.connect();
 
-    try {
+    try
+    {
       await client.query("BEGIN");
 
       const memberRes = await client.query(
@@ -153,11 +183,13 @@ class ChatService {
 
       if (!memberRes.rowCount) throw new Error("NOT_A_MEMBER");
 
-      if (memberRes.rows[0].role !== "admin") {
+      if (memberRes.rows[0].role !== "admin")
+      {
         throw new Error("ONLY_ADMIN_CAN_REMOVE");
       }
 
-      if (requesterId === targetUserId) {
+      if (requesterId === targetUserId)
+      {
         throw new Error("USE_LEAVE");
       }
 
@@ -166,7 +198,8 @@ class ChatService {
         [targetUserId, chatId]
       );
 
-      if (!existing.rowCount) {
+      if (!existing.rowCount)
+      {
         await client.query("COMMIT");
         return { success: true };
       }
@@ -193,19 +226,24 @@ class ChatService {
       this.io.to(targetUserId).emit("removed_from_chat", { chatId });
 
       return { success: true };
-
-    } catch (err) {
+    }
+    catch (err)
+    {
       await client.query("ROLLBACK");
       throw err;
-    } finally {
+    }
+    finally
+    {
       client.release();
     }
   }
 
-  async leaveChat(userId: string, chatId: string) {
+  async leaveChat(userId: string, chatId: string)
+  {
     const client = await pool.connect();
 
-    try {
+    try
+    {
       await client.query("BEGIN");
 
       const memberRes = await client.query(
@@ -217,7 +255,8 @@ class ChatService {
 
       const role = memberRes.rows[0].role;
 
-      if (role === "admin") {
+      if (role === "admin")
+      {
         const adminCountRes = await client.query(
           `SELECT COUNT(*) FROM memberships WHERE chat_id = $1 AND role = 'admin'`,
           [chatId]
@@ -225,7 +264,8 @@ class ChatService {
 
         const adminCount = parseInt(adminCountRes.rows[0].count);
 
-        if (adminCount <= 1) {
+        if (adminCount <= 1)
+        {
           throw new Error("CANNOT_LEAVE_AS_ONLY_ADMIN");
         }
       }
@@ -251,11 +291,14 @@ class ChatService {
       this.io.to(chatId).emit("new_message", message);
 
       return { success: true };
-
-    } catch (err) {
+    }
+    catch (err)
+    {
       await client.query("ROLLBACK");
       throw err;
-    } finally {
+    }
+    finally
+    {
       client.release();
     }
   }

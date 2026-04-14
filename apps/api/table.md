@@ -24,6 +24,8 @@ CREATE TABLE memberships (
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   chat_id UUID REFERENCES chats(id) ON DELETE CASCADE,
   role member_role NOT NULL DEFAULT 'member',
+  join_sequence_number BIGINT default 0,
+  last_seen_sequence_number BIGINT default 0,
   joined_at TIMESTAMP DEFAULT NOW(),
   UNIQUE(user_id, chat_id)
 );

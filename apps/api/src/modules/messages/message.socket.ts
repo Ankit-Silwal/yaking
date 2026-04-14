@@ -1,5 +1,5 @@
 import type { Socket,Server } from "socket.io"
-import { messageService } from "./messages.service.js";
+import { messageService } from "./messages.controller.js";
 import type { messagePayload } from "./message.type.js";
 
 export function messageSocket(io:Server,socket:Socket){

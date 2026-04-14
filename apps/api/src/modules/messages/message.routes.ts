@@ -5,5 +5,5 @@ import { uploadFile } from "./upload.controller.js";
 const router = Router();
 
 router.post("/upload",upload.single("file"),uploadFile);
-
+router.get("/messages", getMessages);
 export default router;
