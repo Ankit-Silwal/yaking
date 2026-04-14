@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import { Server as httpServer } from "node:http";
 import jwt  from "jsonwebtoken";
 import { joinChatSocket } from "./src/modules/chat/chat.socket.js";
-import type { Socket } from "node:dgram";
+
 import type { Decoded } from "./src/types/decoded.js";
 
 let io:Server;
@@ -27,8 +27,8 @@ export async function initilizeSocket(HttpServer:httpServer){
       }
       socket.userId=(decoded as Decoded).id;
       next();
-    }catch(err:any){
-      next(new Error("Authentication failed",err?.message))
+    }catch(err){
+      next(new Error(`Authentication failed:${err}`))
     }
   })
   io.on("connection",(socket)=>{
@@ -36,7 +36,7 @@ export async function initilizeSocket(HttpServer:httpServer){
     joinChatSocket(io,socket);
 
     socket.on("disconnect",async()=>{
-      console.log("Socket disconected",socket.id)
+      console.log("Socket disconnected",socket.id)
     })
   })
 }
