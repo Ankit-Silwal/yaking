@@ -1,9 +1,9 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-export interface AuthRequest extends Request
-{
+export interface AuthRequest extends Request {
   user?: any;
+  userId?: string;
 }
 
 export const requireAuth = (
@@ -25,7 +25,13 @@ export const requireAuth = (
       return res.status(401).json({ error: "Unauthorized: Token missing" });
     }
     const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    console.log('Decoded JWT:', decoded); // Debug log
     req.user = decoded;
+    if (typeof decoded === 'object' && decoded && 'id' in decoded) {
+      req.userId = (decoded as any).id;
+    } else {
+      console.warn('JWT does not contain id:', decoded);
+    }
     next();
   }
   catch (err)
