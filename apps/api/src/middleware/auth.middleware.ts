@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import type { Decoded } from "../types/decoded.js";
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -28,7 +29,7 @@ export const requireAuth = (
     console.log('Decoded JWT:', decoded); // Debug log
     req.user = decoded;
     if (typeof decoded === 'object' && decoded && 'id' in decoded) {
-      req.userId = (decoded as any).id;
+      req.userId = (decoded as Decoded).id;
     } else {
       console.warn('JWT does not contain id:', decoded);
     }
