@@ -8,15 +8,17 @@ class ChatService {
     this.io = io;
   }
 
-  async createSystemMessage(chatId: string, content: string) {
-    const seqRes = await pool.query(
+  async createSystemMessage(client: any, chatId: string, content: string) {
+    const seqRes = await client.query(
       `SELECT COALESCE(MAX(sequence_number), 0) + 1 AS seq
        FROM messages
        WHERE chat_id = $1`,
       [chatId]
     );
+
     const sequenceNumber = seqRes.rows[0].seq;
-    const res = await pool.query(
+
+    const res = await client.query(
       `INSERT INTO messages (chat_id, content, sequence_number, type, client_id)
        VALUES ($1, $2, $3, 'system', gen_random_uuid())
        RETURNING *`,
@@ -73,112 +75,189 @@ class ChatService {
   }
 
   async addMember(requesterId: string, chatId: string, targetUserId: string) {
-    const chatRes = await pool.query(
-      `SELECT * FROM chats WHERE id = $1`,
-      [chatId]
-    );
+    const client = await pool.connect();
 
-    if (!chatRes.rowCount) throw new Error("CHAT_NOT_FOUND");
+    try {
+      await client.query("BEGIN");
 
-    const memberRes = await pool.query(
-      `SELECT role FROM memberships WHERE user_id = $1 AND chat_id = $2`,
-      [requesterId, chatId]
-    );
-
-    if (!memberRes.rowCount) throw new Error("NOT_A_MEMBER");
-
-    if (memberRes.rows[0].role !== "admin") {
-      throw new Error("ONLY_ADMIN_CAN_ADD");
-    }
-
-    await pool.query(
-      `INSERT INTO memberships (user_id, chat_id)
-       VALUES ($1, $2)
-       ON CONFLICT DO NOTHING`,
-      [targetUserId, chatId]
-    );
-
-    const message = await this.createSystemMessage(
-      chatId,
-      `User ${targetUserId} was added`
-    );
-
-    this.io.to(chatId).emit("new_message", message);
-
-    this.io.to(targetUserId).emit("added_to_chat", { chatId });
-
-    return { success: true };
-  }
-
-  async removeMember(requesterId: string, chatId: string, targetUserId: string) {
-    const memberRes = await pool.query(
-      `SELECT role FROM memberships WHERE user_id = $1 AND chat_id = $2`,
-      [requesterId, chatId]
-    );
-
-    if (!memberRes.rowCount) throw new Error("NOT_A_MEMBER");
-
-    if (memberRes.rows[0].role !== "admin") {
-      throw new Error("ONLY_ADMIN_CAN_REMOVE");
-    }
-
-    if (requesterId === targetUserId) {
-      throw new Error("USE_LEAVE");
-    }
-
-    await pool.query(
-      `DELETE FROM memberships WHERE user_id = $1 AND chat_id = $2`,
-      [targetUserId, chatId]
-    );
-
-    const message = await this.createSystemMessage(
-      chatId,
-      `User ${targetUserId} was removed`
-    );
-
-    this.io.to(chatId).emit("new_message", message);
-
-    this.io.to(targetUserId).emit("removed_from_chat", { chatId });
-
-    return { success: true };
-  }
-
-  async leaveChat(userId: string, chatId: string) {
-    const memberRes = await pool.query(
-      `SELECT role FROM memberships WHERE user_id = $1 AND chat_id = $2`,
-      [userId, chatId]
-    );
-
-    if (!memberRes.rowCount) throw new Error("NOT_A_MEMBER");
-
-    const role = memberRes.rows[0].role;
-
-    if (role === "admin") {
-      const adminCountRes = await pool.query(
-        `SELECT COUNT(*) FROM memberships WHERE chat_id = $1 AND role = 'admin'`,
+      const chatRes = await client.query(
+        `SELECT * FROM chats WHERE id = $1`,
         [chatId]
       );
 
-      const adminCount = parseInt(adminCountRes.rows[0].count);
+      if (!chatRes.rowCount) throw new Error("CHAT_NOT_FOUND");
 
-      if (adminCount <= 1) {
-        throw new Error("CANNOT_LEAVE_AS_ONLY_ADMIN");
+      const memberRes = await client.query(
+        `SELECT role FROM memberships WHERE user_id = $1 AND chat_id = $2`,
+        [requesterId, chatId]
+      );
+
+      if (!memberRes.rowCount) throw new Error("NOT_A_MEMBER");
+
+      if (memberRes.rows[0].role !== "admin") {
+        throw new Error("ONLY_ADMIN_CAN_ADD");
       }
+
+      const existing = await client.query(
+        `SELECT 1 FROM memberships WHERE user_id = $1 AND chat_id = $2`,
+        [targetUserId, chatId]
+      );
+
+      if (existing.rowCount) {
+        await client.query("COMMIT");
+        return { success: true };
+      }
+
+      await client.query(
+        `INSERT INTO memberships (user_id, chat_id)
+         VALUES ($1, $2)`,
+        [targetUserId, chatId]
+      );
+
+      await client.query(
+        `SELECT id FROM chats WHERE id = $1 FOR UPDATE`,
+        [chatId]
+      );
+
+      const message = await this.createSystemMessage(
+        client,
+        chatId,
+        `User ${targetUserId} was added`
+      );
+
+      await client.query("COMMIT");
+
+      this.io.to(chatId).emit("new_message", message);
+      this.io.to(targetUserId).emit("added_to_chat", { chatId });
+
+      return { success: true };
+
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
     }
+  }
 
-    await pool.query(
-      `DELETE FROM memberships WHERE user_id = $1 AND chat_id = $2`,
-      [userId, chatId]
-    );
+  async removeMember(requesterId: string, chatId: string, targetUserId: string) {
+    const client = await pool.connect();
 
-    const message = await this.createSystemMessage(
-      chatId,
-      `User ${userId} left the chat`
-    );
+    try {
+      await client.query("BEGIN");
 
-    this.io.to(chatId).emit("new_message", message);
+      const memberRes = await client.query(
+        `SELECT role FROM memberships WHERE user_id = $1 AND chat_id = $2`,
+        [requesterId, chatId]
+      );
 
-    return { success: true };
+      if (!memberRes.rowCount) throw new Error("NOT_A_MEMBER");
+
+      if (memberRes.rows[0].role !== "admin") {
+        throw new Error("ONLY_ADMIN_CAN_REMOVE");
+      }
+
+      if (requesterId === targetUserId) {
+        throw new Error("USE_LEAVE");
+      }
+
+      const existing = await client.query(
+        `SELECT 1 FROM memberships WHERE user_id = $1 AND chat_id = $2`,
+        [targetUserId, chatId]
+      );
+
+      if (!existing.rowCount) {
+        await client.query("COMMIT");
+        return { success: true };
+      }
+
+      await client.query(
+        `DELETE FROM memberships WHERE user_id = $1 AND chat_id = $2`,
+        [targetUserId, chatId]
+      );
+
+      await client.query(
+        `SELECT id FROM chats WHERE id = $1 FOR UPDATE`,
+        [chatId]
+      );
+
+      const message = await this.createSystemMessage(
+        client,
+        chatId,
+        `User ${targetUserId} was removed`
+      );
+
+      await client.query("COMMIT");
+
+      this.io.to(chatId).emit("new_message", message);
+      this.io.to(targetUserId).emit("removed_from_chat", { chatId });
+
+      return { success: true };
+
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  }
+
+  async leaveChat(userId: string, chatId: string) {
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      const memberRes = await client.query(
+        `SELECT role FROM memberships WHERE user_id = $1 AND chat_id = $2`,
+        [userId, chatId]
+      );
+
+      if (!memberRes.rowCount) throw new Error("NOT_A_MEMBER");
+
+      const role = memberRes.rows[0].role;
+
+      if (role === "admin") {
+        const adminCountRes = await client.query(
+          `SELECT COUNT(*) FROM memberships WHERE chat_id = $1 AND role = 'admin'`,
+          [chatId]
+        );
+
+        const adminCount = parseInt(adminCountRes.rows[0].count);
+
+        if (adminCount <= 1) {
+          throw new Error("CANNOT_LEAVE_AS_ONLY_ADMIN");
+        }
+      }
+
+      await client.query(
+        `DELETE FROM memberships WHERE user_id = $1 AND chat_id = $2`,
+        [userId, chatId]
+      );
+
+      await client.query(
+        `SELECT id FROM chats WHERE id = $1 FOR UPDATE`,
+        [chatId]
+      );
+
+      const message = await this.createSystemMessage(
+        client,
+        chatId,
+        `User ${userId} left the chat`
+      );
+
+      await client.query("COMMIT");
+
+      this.io.to(chatId).emit("new_message", message);
+
+      return { success: true };
+
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   }
 
 }
