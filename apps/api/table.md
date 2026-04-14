@@ -25,7 +25,6 @@ CREATE TABLE memberships (
   chat_id UUID REFERENCES chats(id) ON DELETE CASCADE,
   role member_role NOT NULL DEFAULT 'member',
   joined_at TIMESTAMP DEFAULT NOW(),
-
   UNIQUE(user_id, chat_id)
 );
 
