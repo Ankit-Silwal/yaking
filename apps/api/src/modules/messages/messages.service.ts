@@ -168,6 +168,29 @@ class MessageService {
       client.release();
     }
   }
+
+  async getUnreadCount(userId:string){
+    const client=await pool.connect()
+    try{
+      const res=await client.query(`
+        SELECT
+           mem.chat_id,
+           COALESCE(MAX(m.sequence_number), 0) AS latest_seq,
+           mem.last_seen_sequence_number,
+           COALESCE(MAX(m.sequence_number), 0) - mem.last_seen_sequence_number AS unread_count
+         FROM memberships mem
+         LEFT JOIN messages m ON m.chat_id = mem.chat_id
+         WHERE mem.user_id = $1
+         GROUP BY mem.chat_id, mem.last_seen_sequence_number
+        `,[userId])
+      return res.rows.map(row=>({
+        chatId:row.chat_id,
+        unreadCount:Number(row.unread_count)
+      }))
+    }finally{
+      client.release()
+    }
+  }
 }
 
 export const messageService = new MessageService();

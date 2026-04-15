@@ -1,5 +1,5 @@
 import type { Socket, Server } from "socket.io";
-import { messageService } from "./messages.controller.js";
+import { messageService } from "./messages.service.js";
 import type { messagePayload } from "./message.type.js";
 import { pool } from "@repo/shared";
 
