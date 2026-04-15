@@ -5,6 +5,7 @@ import { joinChatSocket } from "./src/modules/chat/chat.socket.js";
 import { pool } from "@repo/shared";
 import type { Decoded } from "./src/types/decoded.js";
 import { chatService } from "./src/modules/chat/chat.service.js";
+import { setUpRedisAdapter } from "./src/configs/redis.js";
 
 let io:Server;
 
@@ -16,6 +17,7 @@ export async function initilizeSocket(HttpServer:httpServer){
       }
     }
   )
+  await setUpRedisAdapter(io);
   io.use((socket,next)=>{
     try{
       const token=socket.handshake.auth?.token;
