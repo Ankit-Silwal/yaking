@@ -20,7 +20,7 @@ export function messageSocket(io: Server, socket: Socket)
 
       io.to(data.chatId).emit("new-message", message);
 
-      callback?.({
+      return callback?.({
         success: true,
         message
       });
@@ -32,6 +32,7 @@ export function messageSocket(io: Server, socket: Socket)
       });
     }
   });
+
   socket.on("sync-messages", async ({ chatId }, callback) =>
   {
     try
@@ -80,7 +81,7 @@ export function messageSocket(io: Server, socket: Socket)
 
         return callback?.({
           success: true,
-          messages: res.rows
+          messages: res.rows 
         });
       }
       finally
@@ -94,5 +95,77 @@ export function messageSocket(io: Server, socket: Socket)
         error: error.message
       });
     }
+  });
+
+  socket.on("mark-as-read", async ({ chatId, lastSeenSequence }, callback) =>
+  {
+    if (!socket.userId || typeof socket.userId !== "string")
+    {
+      return callback?.({ error: "Unauthorized" });
+    }
+
+    if (!chatId || typeof lastSeenSequence !== "number") 
+    {
+      return callback?.({
+        error: "Invalid payload"
+      });
+    }
+
+    const userId = socket.userId;
+    const client = await pool.connect();
+
+    try
+    {
+      const membershipCheck = await client.query(
+        `SELECT 1 FROM memberships  
+         WHERE user_id = $1 AND chat_id = $2`,
+        [userId, chatId]
+      );
+
+      if (!membershipCheck.rowCount)
+      {
+        return callback?.({
+          error: "NOT_A_MEMBER"
+        });
+      }
+
+      await client.query(
+        `UPDATE memberships
+         SET last_seen_sequence_number = GREATEST(last_seen_sequence_number, $3) 
+         WHERE user_id = $1 AND chat_id = $2`,
+        [userId, chatId, lastSeenSequence]
+      );
+
+      return callback?.({ success: true }); 
+    }
+    finally
+    {
+      client.release();
+    }
+  });
+
+  socket.on("user-typing", async ({ chatId }) =>
+  {
+    if (!socket.userId || typeof socket.userId !== "string")
+    {
+      return; 
+    }
+
+    if (!chatId) return;
+
+    const userId = socket.userId;
+
+    const res = await pool.query(
+      `SELECT 1 FROM memberships 
+       WHERE user_id = $1 AND chat_id = $2`,
+      [userId, chatId]
+    );
+
+    if (!res.rowCount) return;
+
+    socket.to(chatId).emit("user-typing", { 
+      chatId,
+      userId
+    });
   });
 }
