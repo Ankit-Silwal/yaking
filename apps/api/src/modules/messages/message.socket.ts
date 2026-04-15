@@ -19,7 +19,17 @@ export function messageSocket(io: Server, socket: Socket)
       const message = await messageService.sendMessage(userId, data);
 
       io.to(data.chatId).emit("new-message", message);
+      const members=await pool.query(`
+        select user_id from memberships
+        where chat_id=$1 and user_id!=$2
+        `,[data.chatId,userId])
 
+        for(const row of members.rows){
+          io.to(row.user_id).emit("unread-updates",{
+            chatId:data.chatId,
+            increment:1
+          })
+        }
       return callback?.({
         success: true,
         message
@@ -135,6 +145,10 @@ export function messageSocket(io: Server, socket: Socket)
          WHERE user_id = $1 AND chat_id = $2`,
         [userId, chatId, lastSeenSequence]
       );
+      io.to(userId).emit("unread-update",{
+        chatId,
+        reset:true
+      })
 
       return callback?.({ success: true }); 
     }
