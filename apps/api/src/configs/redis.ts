@@ -1,6 +1,6 @@
 import { createClient } from "redis";
 import { createAdapter } from "@socket.io/redis-adapter";
-
+import {Redis} from "ioredis"
 export async function setUpRedisAdapter(io:any){
    if (!process.env.REDIS_URL)
   {
@@ -16,3 +16,12 @@ await subClient.connect()
 io.adapter(createAdapter(pubClient,subClient));
 console.log("Redis adapter is connected sir")
 }
+
+export const redis=new Redis(process.env.REDIS_URL!)
+redis.on("connect",()=>{
+  console.log("Connected to the redis server")
+})
+
+redis.on("error",(err:any)=>{
+  console.log(`Error connecting to the redis ${err}`)
+})

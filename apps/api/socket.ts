@@ -6,7 +6,7 @@ import { pool } from "@repo/shared";
 import type { Decoded } from "./src/types/decoded.js";
 import { chatService } from "./src/modules/chat/chat.service.js";
 import { setUpRedisAdapter } from "./src/configs/redis.js";
-
+import {redis} from "./src/configs/redis.js"
 let io:Server;
 
 export async function initilizeSocket(HttpServer:httpServer){
@@ -35,6 +35,20 @@ export async function initilizeSocket(HttpServer:httpServer){
     }
   })
   io.on("connection",async (socket)=>{
+    const userId=socket.userId;
+    if(userId){
+      const count=await redis.incr(`user:${userId}:connections`)
+      if(count==1){
+        await redis.sadd("online-users",userId)
+        const chatRes=await pool.query(`
+          select chat_id from memberships where user_id=$1
+          `,[userId])
+        for(const row of chatRes.rows){
+          io.to(row.chat_id).emit("user-online",{userId})
+        }
+      }
+      socket.join(userId) 
+    }
     console.log("User connected to the socket",socket.id)
       const chats=await pool.query(`
         Select chat_id from memberships where user_id=$1`,
@@ -45,6 +59,18 @@ export async function initilizeSocket(HttpServer:httpServer){
     joinChatSocket(io,socket);
     chatService.setIO(io);
     socket.on("disconnect",async()=>{
+      const userId=socket.userId;
+      if(!userId) return;
+      const count=await redis.decr(`user:${userId}:connections`);
+      if(count==0){
+        await redis.srem("online-users",userId)
+        const chatRes=await pool.query(`
+          select chat_id from memberships where user_id=$1
+          `,[userId])
+        for(const row of chatRes.rows){
+          io.to(row.chat_id).emit("user-offline",{userId})
+        }
+      }
       console.log("Socket disconnected",socket.id)
     })
   })
