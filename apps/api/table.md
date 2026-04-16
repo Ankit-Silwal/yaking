@@ -42,7 +42,7 @@ CREATE TABLE messages (
   client_id UUID NOT NULL,
 
   created_at TIMESTAMP DEFAULT NOW(),
-
+  delivered_to JSONB DEFAULT '[]'
   UNIQUE(client_id),
   UNIQUE(chat_id, sequence_number)
 );
