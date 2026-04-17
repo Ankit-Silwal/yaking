@@ -1,72 +1,47 @@
-"use client";
-
-import { useEffect, useState } from "react";
-
+import AuthButtons from "@/components/hompage/authButton";
 export default function Home()
 {
-  const [user, setUser] = useState<any>(null);
-
-  // 🔍 Extract token & Fetch user
-  useEffect(() =>
-  {
-    const params = new URLSearchParams(window.location.search);
-    let token = params.get("token");
-
-    if (token)
-    {
-      localStorage.setItem("token", token);
-      window.history.replaceState({}, document.title, "/");
-    } else {
-      token = localStorage.getItem("token");
-    }
-
-    if (!token) return;
-
-    fetch("http://localhost:5000/auth/me", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(res => res.json())
-      .then(data => {
-        if (data.user) {
-          setUser(data.user);
-        } else {
-          setUser(null);
-        }
-      })
-      .catch(() => setUser(null));
-  }, []);
-
   return (
-    <div style={{ padding: "2rem" }}>
-      <h1>OAuth Test</h1>
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
 
-      {!user ? (
-        <button
-          onClick={() =>
-          {
-            window.location.href = "http://localhost:5000/auth/google";
-          }}
-        >
-          Login with Google
-        </button>
-      ) : (
-        <div>
-          <h2>Logged in ✅</h2>
-          <pre>{JSON.stringify(user, null, 2)}</pre>
-
-          <button
-            onClick={() =>
-            {
-              localStorage.removeItem("token");
-              setUser(null);
-            }}
-          >
-            Logout
-          </button>
+      <div className="flex w-full max-w-6xl rounded-3xl overflow-hidden shadow-2xl">
+        <div className="hidden md:flex flex-1 flex-col justify-center p-14 bg-black text-white relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-gray-800 opacity-90" />
+          <div className="relative z-10">
+            <h1 className="text-5xl font-bold mb-6 tracking-tight">
+              Gatherly
+            </h1>
+            <p className="text-xl text-gray-300 mb-4">
+              A place for meaningful conversations
+            </p>
+            <p className="text-sm text-gray-400 leading-relaxed max-w-md">
+              Build communities, chat in real-time, and stay connected with people that matter.
+            </p>
+          </div>
         </div>
-      )}
-    </div>
+        <div className="flex flex-1 items-center justify-center bg-white p-10">
+          <div className="w-full max-w-sm">
+            <h2 className="text-2xl font-semibold text-center text-black mb-2">
+              Welcome to Gatherly
+            </h2>
+            <p className="text-center text-gray-500 text-sm mb-8">
+              Start chatting in real-time
+            </p>
+            {/* CLIENT COMPONENT */}
+            <AuthButtons />
+            <p className="text-xs text-gray-400 text-center mt-6 leading-relaxed">
+              By continuing, you agree to Gatherly’s Terms and Privacy Policy.
+            </p>
+
+          </div>
+
+        </div>
+
+      </div>
+      <div className="absolute bottom-4 text-xs text-gray-500 text-center w-full">
+        © 2026 Gatherly · Privacy · Terms
+      </div>
+
+    </main>
   );
 }

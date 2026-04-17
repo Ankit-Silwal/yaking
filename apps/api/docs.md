@@ -39,12 +39,28 @@ Gatherly Premium is a monorepo project using Turborepo, featuring a modular arch
 
 ### Chat (`/chat`)  
 **All endpoints require authentication (JWT Bearer token).**
+#### `POST /messages/upload`
+Upload a file (image or PDF) to Supabase storage.
+* **Form Data:** `file` (single file, max 5MB, image or PDF only)
+* **Returns:** `{ url: string, type: "image" | "pdf" }`
 
-- `POST /chat/`  
-	Create a new chat.  
-	**Body:** `{ name?: string, type: "direct" | "group", memberIds?: string[] }`
+#### `GET /messages/:chatId/messages`
+Get messages for a chat. Supports cursor-based pagination.
+* **Query Params:**
+	- `cursor` (optional, number): Sequence number to start from (exclusive)
+	- `limit` (optional, number): Max messages to return (default 50, max 100)
+* **Returns:** `{ messages: Message[] }`
+* **Errors:**
+	- 401 Unauthorized if not authenticated
+	- 400 if `chatId` missing or invalid params
+	- 403 if not a member of the chat
 
-- `POST /chat/:chatId/members`  
+#### `GET /messages/unread-counts`
+Get unread message counts for all chats for the authenticated user.
+* **Returns:** `{ unread: { [chatId: string]: number } }`
+* **Errors:**
+	- 401 Unauthorized if not authenticated
+
 	Add a member to a chat.  
 	**Body:** `{ chatId: string, targetUserId: string }`  
 	**Only admin can add.**
