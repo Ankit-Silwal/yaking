@@ -1,6 +1,29 @@
-import AuthButtons from "@/components/hompage/authButton";
+"use client"
+import api from "@/lib/api";
+import AuthButtons from "@/components/homepage/authButton";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 export default function Home()
 {
+  const router=useRouter()
+  useEffect(()=>{
+    const initAuth=async ()=>{
+      const params=new URLSearchParams(window.location.search)
+      const token=params.get("token")
+      if(token){
+        localStorage.setItem("token",token)
+        window.history.replaceState({},"","/");
+      }
+      try{
+        await api.get('/auth/me')
+        router.push("/chat")
+      }catch{
+        console.log("User not authenticated")
+      }
+    };
+    initAuth();
+  },[router])
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
 
