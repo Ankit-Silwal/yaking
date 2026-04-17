@@ -1,6 +1,6 @@
 "use client"
 import api from "@/lib/api";
-import AuthButtons from "@/components/homepage/authButton";
+import AuthButtons from "./homepage/authButton";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 export default function Home()
