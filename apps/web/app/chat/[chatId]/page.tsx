@@ -1,79 +1,90 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { SideBar } from "../components/chatSidebar";
 import { ChatHeader } from "../components/chatHeader";
 import { MessageInput } from "../components/messageInput";
-import { MessageItem } from "../components/messageItem";
 import { MessageList } from "../components/messageList";
+import { useChatStore } from "@/store/chatStore";
 
-export default function ChatPage() {
+type Chat = {
+  id: string;
+  name: string;
+  last: string;
+};
+
+type Message = {
+  id: string;
+  text: string;
+  sender: "me" | "other";
+  status?: "Seen" | "Delivered";
+};
+
+export default function ChatPage()
+{
   const params = useParams();
-  const router = useRouter();
-
   const chatId = params.chatId as string;
-  const [input, setInput] = useState("");
 
-  const chats = [
+  const [input, setInput] = useState<string>("");
+
+  const setActiveChat = useChatStore((s) => s.setActiveChat);
+  const setChats = useChatStore((s) => s.setChats);
+  const setMessages = useChatStore((s) => s.setMessages);
+  const addMessage = useChatStore((s) => s.addMessage);
+  const activeChatId = useChatStore((s) => s.activeChatId);
+
+  const chats: Chat[] = [
     { id: "1", name: "Ankit", last: "Hey bro" },
     { id: "2", name: "Dev Group", last: "Meeting at 5" },
     { id: "3", name: "Rahul", last: "Where are you?" },
   ];
 
-  const messages: Record<string, { id: string; text: string; sender: string; status?: string }[]> = {
+  const messages: Record<string, Message[]> = {
     "1": [
       { id: "m1", text: "Hey bro 👋", sender: "other" },
       { id: "m2", text: "Yo! What’s up?", sender: "me", status: "Seen" },
-      { id: "m3", text: "Nothing much, coding all day", sender: "other" },
-      { id: "m4", text: "Same here 😂", sender: "me", status: "Delivered" },
     ],
     "2": [
       { id: "m5", text: "Meeting at 5 guys", sender: "other" },
-      { id: "m6", text: "Got it 👍", sender: "me", status: "Seen" },
     ],
     "3": [
       { id: "m7", text: "Where are you?", sender: "other" },
-      { id: "m8", text: "On my way", sender: "me", status: "Delivered" },
     ],
   };
 
-  const currentChat = chats.find(c => c.id === chatId);
+  useEffect(() =>
+  {
+    setActiveChat(chatId);
+    setChats(chats);
+    setMessages(chatId, messages[chatId] || []);
+  }, [chatId]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    console.log("Send:", input);
+  function handleSend(): void
+  {
+    if (!input.trim() || !activeChatId) return;
+
+    const msg: Message = {
+      id: crypto.randomUUID(),
+      text: input,
+      sender: "me",
+    };
+
+    addMessage(activeChatId, msg);
     setInput("");
-  };
+  }
 
   return (
     <div className="flex h-screen bg-[#F8F9FD] font-sans antialiased overflow-hidden">
-      
-      {/* SIDEBAR */}
-      <SideBar 
-      chatId={chatId}
-      chats={chats}
-      />
-
-      {/* CHAT AREA */}
+      <SideBar />
       <div className="flex-1 flex flex-col relative bg-[#F8F9FD]">
-        
-        {/* HEADER */}
-        <ChatHeader 
-        currentChat={currentChat}
+        <ChatHeader />
+        <MessageList />
+        <MessageInput
+          input={input}
+          setInput={setInput}
+          handleSend={handleSend}
         />
-        {/* MESSAGES */}
-        <MessageList 
-        messages={messages[chatId] || []}
-        />
-
-        {/* INPUT AREA */}
-        <MessageInput 
-        input={input}
-        setInput={setInput}
-        handleSend={handleSend}
-        />
-
       </div>
     </div>
   );

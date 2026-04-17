@@ -21,6 +21,7 @@ type ChatStore={
   setActiveChat:(chatId:string)=>void
   setMessages:(chatId:string,msg:Message[])=>void
   addMessage:(chatId:string,msg:Message)=>void
+  setChats: (chats: Chat[]) => void
 }
 
 export const useChatStore=create<ChatStore>((set)=>({
@@ -45,6 +46,10 @@ export const useChatStore=create<ChatStore>((set)=>({
           ...state.messages,
           [chatId]:[...(state.messages[chatId]||[]),msg]
         }
-      }))
+      })),
+       setChats: (chats) =>
+    set(() => ({
+      chats,
+    })),
 
 }))

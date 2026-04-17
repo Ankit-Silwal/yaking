@@ -1,12 +1,16 @@
 import type { Message } from "./types";
 import { MessageItem } from "./messageItem";
-
+import { useChatStore } from "@/store/chatStore";
 type Props = {
   messages: Message[];
 };
 
-export function MessageList({ messages }: Props)
+export function MessageList()
 {
+  const activeChatId=useChatStore((s)=>s.activeChatId);
+  const messages=useChatStore((s)=>
+    s.messages[activeChatId||""]||[]
+  )
   return (
     <div className="flex-1 overflow-y-auto p-8 space-y-6">
 
