@@ -20,6 +20,7 @@ export function SideBar(){
         <div className="flex-1 overflow-y-auto px-3 space-y-1">
           {chats.map((chat) => (
             <div
+            key={chat.id}
               onClick={() =>{
                   setActiveChat(chat.id)
                  router.push(`/chat/${chat.id}`)}}

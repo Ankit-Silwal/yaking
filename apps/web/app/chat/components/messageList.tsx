@@ -1,16 +1,15 @@
-import type { Message } from "./types";
-import { MessageItem } from "./messageItem";
+"use client";
+
 import { useChatStore } from "@/store/chatStore";
-type Props = {
-  messages: Message[];
-};
+import { MessageItem } from "./messageItem";
 
 export function MessageList()
 {
-  const activeChatId=useChatStore((s)=>s.activeChatId);
-  const messages=useChatStore((s)=>
-    s.messages[activeChatId||""]||[]
-  )
+  const activeChatId = useChatStore((s) => s.activeChatId);
+  const messagesMap = useChatStore((s) => s.messages);
+
+  const messages = activeChatId ? messagesMap[activeChatId] || [] : [];
+
   return (
     <div className="flex-1 overflow-y-auto p-8 space-y-6">
 

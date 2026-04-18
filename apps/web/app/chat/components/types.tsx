@@ -1,3 +1,5 @@
+import { Timestamp } from "next/dist/server/lib/cache-handlers/types";
+
 export type Chat = {
   id: string;
   name: string;
@@ -6,9 +8,14 @@ export type Chat = {
 
 export type Message = {
   id: string;
-  text: string;
-  sender: string;
-  status?: string;
+  chat_id: string;
+  sender_id: string;
+  content: string;
+  type: "system" | "pdf" | "text" | "image";
+  sequence_number: number;
+  client_id: string;
+  created_at: string; 
+  delivered_to: string[]; 
 };
 
 export type MessagesMap = Record<string, Message[]>;
