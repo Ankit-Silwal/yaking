@@ -46,14 +46,14 @@ export default function ChatPage()
   {
     if (!input.trim() || !activeChatId) return;
 
-    const msg = {
-      id: crypto.randomUUID(),
-      text: input,
-      sender: "me" as const,
-      status: "Delivered" as const,
-    };
+    const payload={
+      chatId:activeChatId,
+      content:input,
+      clientId:crypto.randomUUID(),
+      type:"text"
+    }
 
-    addMessage(activeChatId, msg);
+    addMessage(activeChatId, payload);
     setInput("");
   }
 

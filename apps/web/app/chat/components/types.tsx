@@ -12,7 +12,7 @@ export type Message = {
   sender_id: string;
   content: string;
   type: "system" | "pdf" | "text" | "image";
-  sequence_number: number;
+  sequence_number: string;
   client_id: string;
   created_at: string; 
   delivered_to: string[]; 

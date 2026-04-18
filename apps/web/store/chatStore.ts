@@ -1,10 +1,22 @@
 import { create } from "zustand";
 
-type Message = {
+export type BackendMessage = {
   id: string;
-  text: string;
-  sender: "me" | "other";
-  status?: "Seen" | "Delivered";
+  chat_id: string;
+  sender_id: string;
+  content: string;
+  type: "text" | "pdf" | "image";
+  sequence_number: string;
+  client_id: string;
+  created_at: string;
+  delivered_to: string[];
+};
+
+export type SendMessagePayload = {
+  chatId: string;
+  content: string;
+  clientId: string;
+  type: "text" | "pdf" | "image";
 };
 
 type Chat = {
@@ -14,13 +26,13 @@ type Chat = {
 };
 
 type ChatStore = {
-  messages: Record<string, Message[]>;
+  messages: Record<string, BackendMessage[]>;
   chats: Chat[];
   activeChatId: string | null;
 
   setActiveChat: (chatId: string) => void;
-  setMessages: (chatId: string, msgs: Message[]) => void;
-  addMessage: (chatId: string, msg: Message) => void;
+  setMessages: (chatId: string, msgs: BackendMessage[]) => void;
+  addMessage: (chatId: string, msg: BackendMessage) => void;
   setChats: (chats: Chat[]) => void;
 };
 
