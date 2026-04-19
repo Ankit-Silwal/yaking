@@ -51,9 +51,11 @@ export default function ChatPage()
       clientId: crypto.randomUUID(),
       type: "text" as const,
     };
+    console.log("Sending",payload)
 
     socket.emit("send-message", payload, (res: any) =>
     {
+      console.log("Ack",res)
       if (res?.error)
       {
         console.error("Send failed:", res.error);
@@ -68,7 +70,9 @@ export default function ChatPage()
 
       <div className="flex-1 flex flex-col">
         <ChatHeader />
-        <MessageList />
+        <MessageList
+        currentUserId={userId}
+        />
         <MessageInput
           input={input}
           setInput={setInput}

@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import { Server as httpServer } from "node:http";
 import jwt  from "jsonwebtoken";
 import { joinChatSocket } from "./src/modules/chat/chat.socket.js";
+import { messageSocket } from "./src/modules/messages/message.socket.js";
 import { pool } from "@repo/shared";
 import type { Decoded } from "./src/types/decoded.js";
 import { chatService } from "./src/modules/chat/chat.service.js";
@@ -47,6 +48,9 @@ export async function initilizeSocket(HttpServer:httpServer){
           io.to(row.chat_id).emit("user-online",{userId})
         }
       }
+      socket.onAny((event,...args)=>{
+        console.log("Event received ",event,args)
+      })
       socket.join(userId) 
     }
     console.log("User connected to the socket",socket.id)
@@ -57,6 +61,7 @@ export async function initilizeSocket(HttpServer:httpServer){
         socket.join(row.chat_id)
       }
     joinChatSocket(io,socket);
+    messageSocket(io, socket);
     chatService.setIO(io);
     socket.on("disconnect",async()=>{
       const userId=socket.userId;

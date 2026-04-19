@@ -2,21 +2,22 @@ import type { Message } from "./types";
 
 type Props = {
   msg: Message;
+  currentUserId:string
 };
-export function MessageItem({ msg }: Props) {
-  const isMe = msg.sender_id === "me"; 
+export function MessageItem({ msg, currentUserId }: Props) {
+  const me = msg.sender_id === currentUserId; 
 
   return (
-    <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+    <div className={`flex ${me ? "justify-end" : "justify-start"}`}>
       <div
         className={`flex flex-col ${
-          isMe ? "items-end" : "items-start"
+          me ? "items-end" : "items-start"
         } max-w-[50%]`}
       >
         {/* MESSAGE BUBBLE */}
         <div
           className={`px-4 py-3 rounded-2xl text-[14px] leading-relaxed shadow-sm ${
-            isMe
+            me
               ? "bg-black text-white rounded-tr-none"
               : "bg-white text-gray-800 border border-gray-100 rounded-tl-none"
           }`}
@@ -24,7 +25,7 @@ export function MessageItem({ msg }: Props) {
           {msg.content}
         </div>
         {/* STATUS */}
-        {isMe && (
+        {me && (
           <div className="flex items-center gap-1 mt-1.5 px-1">
             <span
               className={`text-[10px] font-bold ${
