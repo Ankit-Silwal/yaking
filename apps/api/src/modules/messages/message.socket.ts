@@ -7,6 +7,7 @@ export function messageSocket(io: Server, socket: Socket)
 {
   socket.on("send-message", async (data: messagePayload, callback) =>
   {
+    console.log("send-message socket is working")
     try
     {
       if (!socket.userId || typeof socket.userId !== "string")

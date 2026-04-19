@@ -53,13 +53,25 @@ export const useChatStore = create<ChatStore>((set) => ({
     })),
 
   addMessage: (chatId, msg) =>
-    set((state) => ({
+  set((state) =>
+  {
+    const existing = state.messages[chatId] || [];
+    const alreadyExists = existing.some(
+      (m) => m.client_id === msg.client_id
+    );
+    if (alreadyExists) return state;
+    const updated = [...existing, msg];
+    updated.sort(
+      (a, b) =>
+        Number(a.sequence_number) - Number(b.sequence_number)
+    );
+    return {
       messages: {
         ...state.messages,
-        [chatId]: [...(state.messages[chatId] || []), msg],
+        [chatId]: updated,
       },
-    })),
-
+    };
+  }),
   setChats: (chats) =>
     set(() => ({ chats })),
 }));

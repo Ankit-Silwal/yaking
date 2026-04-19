@@ -4,7 +4,7 @@ type Props = {
   msg: Message;
 };
 export function MessageItem({ msg }: Props) {
-  const isMe = msg.sender_id === "me"; // This should be compared with the actual logged-in user's ID
+  const isMe = msg.sender_id === "me"; 
 
   return (
     <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>

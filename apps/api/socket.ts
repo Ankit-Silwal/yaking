@@ -13,7 +13,7 @@ export async function initilizeSocket(HttpServer:httpServer){
   io=new Server(
     HttpServer,{
       cors:{
-        origin:"*"
+        origin:"http://localhost:3000"
       }
     }
   )
