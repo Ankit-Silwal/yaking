@@ -20,9 +20,13 @@ export type SendMessagePayload = {
 };
 
 type Chat = {
-  id: string;
-  name: string;
-  last: string;
+  id:string,
+  name:string,
+  type:"direct"|"group",
+  created_at:string,
+  role:"admin"|"member"
+  last_message_content:"string",
+  last_message_at:"string"
 };
 
 type ChatStore = {

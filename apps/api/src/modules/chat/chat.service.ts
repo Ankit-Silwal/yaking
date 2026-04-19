@@ -303,6 +303,32 @@ class ChatService {
     }
   }
 
+  async getChats(userId: string) {
+    const res = await pool.query(
+      `SELECT
+        c.id,
+        c.name,
+        c.type,
+        c.created_at,
+        m.role,
+        lm.content as last_message_content,
+        lm.created_at as last_message_at
+      FROM chats c
+      JOIN memberships m ON c.id = m.chat_id
+      LEFT JOIN LATERAL (
+        SELECT content, created_at
+        FROM messages
+        WHERE chat_id = c.id
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) lm ON true
+      WHERE m.user_id = $1
+      ORDER BY lm.created_at DESC`,
+      [userId]
+    );
+
+    return res.rows;
+  }
 }
 
 export const chatService = new ChatService();
