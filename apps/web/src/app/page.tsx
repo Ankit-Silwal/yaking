@@ -6,14 +6,20 @@ export default function Home()
 {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
+    const tokenFromUrl = params.get("token");
 
-    if (token) {
-      localStorage.setItem("token", token);
-      window.location.href = "/chat"; // move to app
+    if (tokenFromUrl) {
+      localStorage.setItem("token", tokenFromUrl);
+      window.location.href = "/chat";
+      return;
     }
-    if(!token){
-      window.location.href="/login"
+
+    const existingToken = localStorage.getItem("token");
+
+    if (!existingToken) {
+      window.location.href = "/login";
+    } else {
+      window.location.href = "/chat";
     }
   }, []);
 
