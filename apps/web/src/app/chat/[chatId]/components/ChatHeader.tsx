@@ -99,7 +99,7 @@ export default function ChatHeader({ chat }: ChatHeaderProps) {
           <button
             key={label}
             onClick={() => console.log(`${label} clicked`)}
-            title={label}
+            title={label === "Call" || label === "Video" ? "Under Construction" : label}
             className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/[0.07] transition-all duration-150"
           >
             {icon}

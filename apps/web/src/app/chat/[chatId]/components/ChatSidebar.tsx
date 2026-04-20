@@ -1,16 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useChatStore } from "@/store/chatStore";
 import { Chat } from "./mockData";
 import ChatItem from "./ChatItem";
 
 interface ChatSidebarProps {
-  chats: Chat[];
   selectedChatId: string;
   onSelectChat: (chatId: string) => void;
 }
 
-export default function ChatSidebar({ chats, selectedChatId, onSelectChat }: ChatSidebarProps) {
+export default function ChatSidebar({ selectedChatId, onSelectChat }: ChatSidebarProps) {
+  const chats=useChatStore((s)=>s.chats)
   const [search, setSearch] = useState("");
 
   const filtered = chats.filter((c) =>

@@ -23,7 +23,6 @@ export default function ChatPage() {
     >
       {/* Sidebar */}
       <ChatSidebar
-        chats={mockChats}
         selectedChatId={selectedChatId}
         onSelectChat={handleSelectChat}
       />
